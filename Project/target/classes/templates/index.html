@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huffman Compressor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .drop-zone {
+            transition: all 0.3s ease;
+        }
+        .drop-zone.dragover {
+            background-color: #dbeafe;
+            border-color: #3b82f6;
+            transform: scale(1.02);
+        }
+        .loading {
+            display: none;
+        }
+        .loading.active {
+            display: inline-block;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">Huffman Compressor</h1>
+            <p class="text-lg text-gray-600">Compress and decompress files using Huffman coding algorithm</p>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Toggle Buttons -->
+            <div class="flex justify-center mb-6">
+                <div class="inline-flex rounded-lg shadow-sm" role="group">
+                    <button id="compressTabBtn" 
+                            class="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-l-lg hover:bg-blue-600 focus:z-10 focus:ring-2 focus:ring-blue-500 focus:bg-blue-600">
+                        Compress
+                    </button>
+                    <button id="decompressTabBtn" 
+                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-r-lg hover:bg-gray-50 focus:z-10 focus:ring-2 focus:ring-blue-500 focus:text-blue-700">
+                        Decompress
+                    </button>
+                </div>
+            </div>
+
+            <!-- Compression Area -->
+            <section id="compressionArea" class="bg-white rounded-lg shadow-lg p-6">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Text Compression -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-medium text-gray-700 border-b pb-2">Compress Text</h3>
+                        <textarea id="textInput" 
+                                  class="w-full h-40 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                  placeholder="Enter text to compress..."></textarea>
+                        
+                        <div id="compressedTextResult" class="hidden space-y-3">
+                            <label class="block text-sm font-medium text-gray-700">Compressed Data (Base64):</label>
+                            <textarea id="compressedTextOutput" 
+                                      class="w-full h-20 p-3 bg-gray-50 border border-gray-300 rounded-lg font-mono text-xs resize-none"
+                                      readonly></textarea>
+                            <div id="textCompressionStats" class="text-sm text-gray-600 bg-blue-50 p-2 rounded"></div>
+                            <div class="flex space-x-2">
+                                <button id="copyCompressedBtn" 
+                                        class="bg-gray-500 hover:bg-gray-600 text-white text-sm py-1 px-3 rounded transition-colors">
+                                    Copy to Clipboard
+                                </button>
+                                <button id="downloadCompressedBtn" 
+                                        class="bg-blue-500 hover:bg-blue-600 text-white text-sm py-1 px-3 rounded transition-colors">
+                                    Download as .txt
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- File Compression -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-medium text-gray-700 border-b pb-2">Compress File</h3>
+                        <div class="drop-zone border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 transition-colors"
+                             ondrop="handleDrop(event, 'compress')" 
+                             ondragover="handleDragOver(event)" 
+                             ondragleave="handleDragLeave(event)"
+                             onclick="document.getElementById('compressFile').click()">
+                            <svg class="w-10 h-10 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                            <p class="text-gray-600 text-sm mb-1">Drag & drop or click to browse</p>
+                            <p class="text-xs text-gray-500">Any file type • Max 50MB</p>
+                            <input type="file" id="compressFile" name="file" class="hidden" onchange="handleFileSelect(event, 'compress')">
+                        </div>
+                        
+                        <div id="compressFileInfo" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+                            <p class="text-blue-800">
+                                <span class="font-semibold">File:</span> 
+                                <span id="compressFileName"></span>
+                            </p>
+                            <p class="text-blue-800">
+                                <span class="font-semibold">Size:</span> 
+                                <span id="compressFileSize"></span>
+                            </p>
+                        </div>
+                        
+                        <div id="compressStats" class="hidden bg-green-50 border border-green-200 rounded-lg p-3">
+                            <h4 class="font-semibold text-green-800 mb-2 text-sm">Compression Results</h4>
+                            <div class="space-y-1 text-xs text-green-700">
+                                <p>Original: <span id="originalSize" class="font-mono"></span></p>
+                                <p>Compressed: <span id="compressedSize" class="font-mono"></span></p>
+                                <p>Ratio: <span id="compressionRatio" class="font-mono"></span></p>
+                                <p>Saved: <span id="spaceSaved" class="font-mono"></span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Compression Buttons - Aligned at Bottom -->
+                <div class="grid md:grid-cols-2 gap-8 mt-6">
+                    <button id="compressTextBtn" 
+                            class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
+                        <span class="loading mr-2 hidden">
+                            <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </span>
+                        <span class="button-text">Compress Text</span>
+                    </button>
+                    
+                    <button id="compressFileBtn" 
+                            class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
+                        <span class="loading mr-2 hidden">
+                            <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </span>
+                        <span class="button-text">Compress File</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Decompression Area -->
+            <section id="decompressionArea" class="hidden bg-white rounded-lg shadow-lg p-6">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Text Decompression -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-medium text-gray-700 border-b pb-2">Decompress Text</h3>
+                        <textarea id="compressedTextInput" 
+                                  class="w-full h-40 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                                  placeholder="Paste compressed Base64 data..."></textarea>
+                        
+                        <div id="decompressedTextResult" class="hidden space-y-3">
+                            <label class="block text-sm font-medium text-gray-700">Decompressed Text:</label>
+                            <textarea id="decompressedTextOutput" 
+                                      class="w-full h-20 p-3 bg-gray-50 border border-gray-300 rounded-lg resize-none"
+                                      readonly></textarea>
+                            <div id="textDecompressionStats" class="text-sm text-gray-600 bg-green-50 p-2 rounded"></div>
+                            <div class="flex space-x-2">
+                                <button id="copyDecompressedBtn" 
+                                        class="bg-gray-500 hover:bg-gray-600 text-white text-sm py-1 px-3 rounded transition-colors">
+                                    Copy to Clipboard
+                                </button>
+                                <button id="downloadDecompressedBtn" 
+                                        class="bg-green-500 hover:bg-green-600 text-white text-sm py-1 px-3 rounded transition-colors">
+                                    Download as .txt
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- File Decompression -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-medium text-gray-700 border-b pb-2">Decompress File</h3>
+                        <div class="drop-zone border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-green-400 transition-colors"
+                             ondrop="handleDrop(event, 'decompress')" 
+                             ondragover="handleDragOver(event)" 
+                             ondragleave="handleDragLeave(event)"
+                             onclick="document.getElementById('decompressFile').click()">
+                            <svg class="w-10 h-10 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                            <p class="text-gray-600 text-sm mb-1">Drag & drop or click to browse</p>
+                            <p class="text-xs text-gray-500">Compressed files: .huf, .txt, .zip, .gz, .tar, .rar, .7z, .bz2, .xz, .lzma, .jar, .exe, .doc, .docx, .xls, .xlsx, .ppt, .pptx, .xml, .json, .csv and more</p>
+                            <input type="file" id="decompressFile" name="file" class="hidden" onchange="handleFileSelect(event, 'decompress')">
+                        </div>
+                        
+                        <div id="decompressFileInfo" class="hidden bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+                            <p class="text-green-800">
+                                <span class="font-semibold">File:</span> 
+                                <span id="decompressFileName"></span>
+                            </p>
+                            <p class="text-green-800">
+                                <span class="font-semibold">Size:</span> 
+                                <span id="decompressFileSize"></span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Decompression Buttons - Aligned at Bottom -->
+                <div class="grid md:grid-cols-2 gap-8 mt-6">
+                    <button id="decompressTextBtn" 
+                            class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
+                        <span class="loading mr-2 hidden">
+                            <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </span>
+                        <span class="button-text">Decompress Text</span>
+                    </button>
+                    
+                    <button id="decompressFileBtn" 
+                            class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
+                        <span class="loading mr-2 hidden">
+                            <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </span>
+                        <span class="button-text">Decompress File</span>
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="mt-12 py-8">
+            <div class="container mx-auto px-4">
+                <div class="text-center">
+                    <p class="text-sm text-gray-600 mb-2">© 2026 Huffman Compressor</p>
+                    <p class="text-xs text-gray-500">Efficient lossless data compression using Huffman coding algorithm</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            event.currentTarget.classList.remove('dragover');
+        }
+
+        function handleDrop(event, type) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const fileInput = document.getElementById(type + 'File');
+                fileInput.files = files;
+                handleFileSelect({ target: fileInput }, type);
+            }
+        }
+
+        function handleFileSelect(event, type) {
+            const file = event.target.files[0];
+            if (file) {
+                document.getElementById(type + 'FileName').textContent = file.name;
+                document.getElementById(type + 'FileSize').textContent = formatFileSize(file.size);
+                document.getElementById(type + 'FileInfo').classList.remove('hidden');
+            }
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function setLoading(form, loading) {
+            const button = form.querySelector('button[type="submit"]');
+            const loadingSpinner = button.querySelector('.loading');
+            const buttonText = button.querySelector('.button-text');
+            
+            if (loading) {
+                loadingSpinner.classList.add('active');
+                buttonText.textContent = 'Processing...';
+                button.disabled = true;
+            } else {
+                loadingSpinner.classList.remove('active');
+                buttonText.textContent = form.id === 'compressForm' ? 'Compress File' : 'Decompress File';
+                button.disabled = false;
+            }
+        }
+
+        // Text compression
+        document.getElementById('compressTextBtn').addEventListener('click', async function() {
+            const textInput = document.getElementById('textInput');
+            const text = textInput.value.trim();
+            
+            if (!text) {
+                alert('Please enter text to compress');
+                return;
+            }
+
+            const loadingSpinner = this.querySelector('.loading');
+            const buttonText = this.querySelector('.button-text');
+            
+            loadingSpinner.classList.remove('hidden');
+            buttonText.textContent = 'Compressing...';
+            this.disabled = true;
+
+            try {
+                const response = await fetch('/compress-text', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    document.getElementById('compressedTextOutput').value = result.compressedData;
+                    document.getElementById('textCompressionStats').innerHTML = 
+                        `Original: ${formatFileSize(result.originalSize)} | ` +
+                        `Compressed: ${formatFileSize(result.compressedSize)} | ` +
+                        `Ratio: ${(result.compressionRatio * 100).toFixed(1)}% | ` +
+                        `Space Saved: ${result.spaceSavedPercentage.toFixed(1)}%`;
+                    
+                    document.getElementById('compressedTextResult').classList.remove('hidden');
+                } else {
+                    alert('Text compression failed');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred during text compression');
+            } finally {
+                loadingSpinner.classList.add('hidden');
+                buttonText.textContent = 'Compress Text';
+                this.disabled = false;
+            }
+        });
+
+        // Text decompression
+        document.getElementById('decompressTextBtn').addEventListener('click', async function() {
+            const compressedTextInput = document.getElementById('compressedTextInput');
+            const compressedData = compressedTextInput.value.trim();
+            
+            if (!compressedData) {
+                alert('Please enter compressed data to decompress');
+                return;
+            }
+
+            const loadingSpinner = this.querySelector('.loading');
+            const buttonText = this.querySelector('.button-text');
+            
+            loadingSpinner.classList.remove('hidden');
+            buttonText.textContent = 'Decompressing...';
+            this.disabled = true;
+
+            try {
+                const response = await fetch('/decompress-text', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ compressedData: compressedData })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    document.getElementById('decompressedTextOutput').value = result.decompressedText;
+                    document.getElementById('textDecompressionStats').innerHTML = 
+                        `Compressed: ${formatFileSize(result.compressedSize)} | ` +
+                        `Decompressed: ${formatFileSize(result.decompressedSize)}`;
+                    
+                    document.getElementById('decompressedTextResult').classList.remove('hidden');
+                } else {
+                    alert('Text decompression failed. Please ensure the data is valid compressed text.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred during text decompression');
+            } finally {
+                loadingSpinner.classList.add('hidden');
+                buttonText.textContent = 'Decompress Text';
+                this.disabled = false;
+            }
+        });
+
+        // Copy to clipboard functions
+        document.getElementById('copyCompressedBtn').addEventListener('click', function() {
+            const compressedText = document.getElementById('compressedTextOutput');
+            compressedText.select();
+            document.execCommand('copy');
+            this.textContent = 'Copied!';
+            setTimeout(() => {
+                this.textContent = 'Copy to Clipboard';
+            }, 2000);
+        });
+
+        document.getElementById('copyDecompressedBtn').addEventListener('click', function() {
+            const decompressedText = document.getElementById('decompressedTextOutput');
+            decompressedText.select();
+            document.execCommand('copy');
+            this.textContent = 'Copied!';
+            setTimeout(() => {
+                this.textContent = 'Copy to Clipboard';
+            }, 2000);
+        });
+
+        // Download compressed text
+        document.getElementById('downloadCompressedBtn').addEventListener('click', function() {
+            const compressedText = document.getElementById('compressedTextOutput').value;
+            if (!compressedText) return;
+            
+            const blob = new Blob([compressedText], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'compressed_text.txt';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        });
+
+        // Download decompressed text
+        document.getElementById('downloadDecompressedBtn').addEventListener('click', function() {
+            const decompressedText = document.getElementById('decompressedTextOutput').value;
+            if (!decompressedText) return;
+            
+            const blob = new Blob([decompressedText], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'decompressed_text.txt';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        });
+
+        // File compression
+        document.getElementById('compressFileBtn').addEventListener('click', async function() {
+            const fileInput = document.getElementById('compressFile');
+            
+            if (!fileInput.files[0]) {
+                alert('Please select a file to compress');
+                return;
+            }
+
+            const loadingSpinner = this.querySelector('.loading');
+            const buttonText = this.querySelector('.button-text');
+            
+            loadingSpinner.classList.remove('hidden');
+            buttonText.textContent = 'Compressing...';
+            this.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                // Get compression stats first
+                const statsResponse = await fetch('/stats?file=' + encodeURIComponent(fileInput.files[0].name), {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (statsResponse.ok) {
+                    const stats = await statsResponse.json();
+                    document.getElementById('originalSize').textContent = formatFileSize(stats.originalSize);
+                    document.getElementById('compressedSize').textContent = formatFileSize(stats.compressedSize);
+                    document.getElementById('compressionRatio').textContent = (stats.compressionRatio * 100).toFixed(1) + '%';
+                    document.getElementById('spaceSaved').textContent = stats.spaceSavedPercentage.toFixed(1) + '%';
+                    document.getElementById('compressStats').classList.remove('hidden');
+                }
+
+                // Download compressed file
+                const response = await fetch('/compress', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileInput.files[0].name.replace(/\.[^.]+$/, '') + '.huf';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else {
+                    alert('Compression failed');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred during compression');
+            } finally {
+                loadingSpinner.classList.add('hidden');
+                buttonText.textContent = 'Compress File';
+                this.disabled = false;
+            }
+        });
+
+        // File decompression
+        document.getElementById('decompressFileBtn').addEventListener('click', async function() {
+            const fileInput = document.getElementById('decompressFile');
+            
+            if (!fileInput.files[0]) {
+                alert('Please select a file to decompress');
+                return;
+            }
+
+            const loadingSpinner = this.querySelector('.loading');
+            const buttonText = this.querySelector('.button-text');
+            
+            loadingSpinner.classList.remove('hidden');
+            buttonText.textContent = 'Decompressing...';
+            this.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                const response = await fetch('/decompress', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileInput.files[0].name.replace(/\.[^.]+$/, '') + '_decompressed.txt';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else {
+                    alert('Decompression failed. Please ensure the file is a valid compressed .huf file.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred during decompression');
+            } finally {
+                loadingSpinner.classList.add('hidden');
+                buttonText.textContent = 'Decompress File';
+                this.disabled = false;
+            }
+        });
+
+        // Tab switching functionality
+        function switchTab(tabName) {
+            const compressArea = document.getElementById('compressionArea');
+            const decompressArea = document.getElementById('decompressionArea');
+            const compressBtn = document.getElementById('compressTabBtn');
+            const decompressBtn = document.getElementById('decompressTabBtn');
+            
+            if (tabName === 'compress') {
+                // Show compression area
+                compressArea.classList.remove('hidden');
+                decompressArea.classList.add('hidden');
+                
+                // Update button styles
+                compressBtn.className = 'px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-l-lg hover:bg-blue-600 focus:z-10 focus:ring-2 focus:ring-blue-500 focus:bg-blue-600';
+                decompressBtn.className = 'px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-r-lg hover:bg-gray-50 focus:z-10 focus:ring-2 focus:ring-blue-500 focus:text-blue-700';
+            } else {
+                // Show decompression area
+                compressArea.classList.add('hidden');
+                decompressArea.classList.remove('hidden');
+                
+                // Update button styles
+                compressBtn.className = 'px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-50 focus:z-10 focus:ring-2 focus:ring-blue-500 focus:text-blue-700';
+                decompressBtn.className = 'px-4 py-2 text-sm font-medium text-white bg-green-500 rounded-r-lg hover:bg-green-600 focus:z-10 focus:ring-2 focus:ring-green-500 focus:bg-green-600';
+            }
+        }
+
+        // Tab button event listeners
+        document.getElementById('compressTabBtn').addEventListener('click', function() {
+            switchTab('compress');
+        });
+
+        document.getElementById('decompressTabBtn').addEventListener('click', function() {
+            switchTab('decompress');
+        });
+
+        // Session management
+        let currentSessionId = null;
+
+        // Initialize session on page load
+        window.addEventListener('load', async function() {
+            try {
+                const response = await fetch('/session/create', { method: 'POST' });
+                if (response.ok) {
+                    const result = await response.json();
+                    currentSessionId = result.sessionId;
+                    console.log('Session created:', currentSessionId);
+                }
+            } catch (error) {
+                console.error('Failed to create session:', error);
+            }
+        });
+    </script>
+</body>
+</html>

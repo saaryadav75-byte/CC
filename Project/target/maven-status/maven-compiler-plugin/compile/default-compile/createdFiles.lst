@@ -1,0 +1,10 @@
+com/huffman/compressor/service/CompressionHistoryService.class
+com/huffman/compressor/service/HuffmanService$BitOutputStream.class
+com/huffman/compressor/service/HuffmanService.class
+com/huffman/compressor/controller/CompressionController.class
+com/huffman/compressor/HuffmanCompressorApplication.class
+com/huffman/compressor/service/FileValidationService.class
+com/huffman/compressor/model/CompressionHistory.class
+com/huffman/compressor/controller/CompressionController$CompressionStats.class
+com/huffman/compressor/service/HuffmanService$BitInputStream.class
+com/huffman/compressor/model/HuffmanNode.class
